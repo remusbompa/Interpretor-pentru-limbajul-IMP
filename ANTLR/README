@@ -1,0 +1,55 @@
+/* Bompa Remus 335CB */
+
+1)Prog.g4
+-defineste regulile gramaticii Prog:
+	*)prog - formata din lista variabilelor precedata de "int", urmata de ";" si o regula 
+	statement. Descrie intreg pprogramul.
+	*)varList - descrie lista de variabile, separate prin ",".
+	*)block - descrie un bloc cuprins intre acolade, care poate fi vid, sau poate fi descris de 
+	o regula statement
+	*)stmt - poate descrie o atribuire, caz in care regula se va numi assignment, un block, caz
+	in care se va numi stBlock, un bloc if-else (se va numi if), un bloc while (while) sau o 
+	pereche de stmt (seq), pentru care in cazul in care sunt mai mult de 2 reguli stmt, 
+	asocierea se face de la dreapta la stanga.
+	*)aExpr - poate descrie o variabila (varAExpr), o valoarea aritmetica(un numar) (avalAExpr),
+	doua reguli aExpr separate prin "/" sau "+" (div sau plus), sau o regula aExpr aflata intre
+	paranteze rotunde (bracketA). Regula descrie o expresie aritmetica.
+	*)bExpr - poate descrie o valoare booleana (bvalBExpr), o valoarea booleana negata (cu "!" 
+	in fata) (not), doua reguli bExpr separate prin "&&" (and), doua reguli aExpr separate prin
+	">" (greater) sau o regula bExpr aflata intre paranteze rotunde (bracketB). Regula descrie o
+	expresie booleana.
+	*)var - regula descire o variabila (un sir de caractere)
+	*)bval - regula descrie o valoarea booleana (sirul "true" sau sirul "false")
+	*)aval - regula descrie o valoare aritmetica (un numar)
+-defineste niste tokeni folositi la definirea regulilor gramaticii:
+	*)BOOLEAN -descrie sirul "true" sau sirul "false"
+	*)NUMBER -descrie un numar
+	*)STRING -descrie un sir de caractere
+	*)WS -defineste un spatiu alb, tab, sau un newline si actiunea skip care il neglijeaza
+
+2)MyVisitor.java
+-defineste clasa MyVisitor care extinde ProgBaseVisitor<Void>, generat de Prog.g4
+-la initializare clasei, se initializeaza sirul str, in care se retinesirul de caractere ce va
+fi printat in fisierul de iesire , cu "<MainNode>\n", se initializeaza nr, in care se retine
+nivelul identarii (numarul de taburi care trebuie folosite), cu 0, si se initializeaza ok, o
+variabila booleana care indica cand se va putea scrie o variabila in str (cand s-a trecut de
+lista de variabile descrisa de rgula varList) cu False.
+- la fiecare intrare in una din regulile: block, assignment, while, if, seq, div, var, aval, 
+bracketA, plus, bval, not, and, greater, bracketB, descrise in Prog.g4 si apartinand arborelui
+sintactic, se incrementeaza nivelul identarii (self.nr), se adauga numaru de taburi necesare in
+str, apeland metoda: addTabs, se adauga in str sirul: "<Nume_Nod Valoare_Nod>
+- la fiecare iesire din una dintre regulile anterioare, se decrementeaza nivelul identarii
+- la finalul parsarii, in variabila str se va afla arborele sintactic ce trebuie scris in
+fisierul de iesire
+
+3)Tema.java
+- liniea 25 deschide fisierul primit ca parametru in lina de comanda
+- urmatoarea linie creeaza un lexer, care identifica tokenii pentru fisierul primit ca argument
+- linia 34 creeaza un parser peste gramatica Prog definita
+- obiectul tree reprezinta arborele sintactic al fisierului de intrare parsat cu parser
+- visitor e obiectul visitor implementat in MyVisitor.java
+- apelul visitor.visit(tree) viziteaza arborele sintactic tree cu ajutorul visitor-ului
+visitor
+- linia 45 creaza fisierul "arbore-b", caruia ii asociaza buffer-ul bw
+- arborele sintactic, construit in visitor.str este scris in fisierul bw prin apelul:
+bw.write(str);

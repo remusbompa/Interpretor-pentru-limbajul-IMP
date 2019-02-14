@@ -1,0 +1,107 @@
+/*Bompa Remus 335CB */
+
+1)Expression.java
+
+- In fisierul Expression.java este definita clasa abstracta Expression.java, avand metodele:
+*)public void explore(int niv, BufferedWriter bw)
+	-folosita pentru scrierea arborelui sintactic in fisierul reprezentat de bufferul bw
+	-niv este folosit pentru a specifica nivelul de identare a nodului ( este initial 0)
+
+*)public boolean interpret(LinkedHashMap<String,Integer> variables, boolean aux)
+*)public void interpret(LinkedHashMap<String,Integer> variables, Object aux)
+*)public int interpret(LinkedHashMap<String,Integer> variables, int aux)
+*)public String interpret(LinkedHashMap<String,Integer> variables, char aux)
+	-metode folosite la asignarea variabilelor din lista variables, oferita ca prim parametru
+	-variabilele sunt asignate prin apelul metodei void interpret a obiectului de tip AssignExpr
+	-la apelul metodei void interpret pe obiectele de tipul: BlockExpr, IfExpr, WhileExpr,
+SeqExpr, se inainteaza in arborele sintactic cu sau fara niste conditii booleene
+	-la apelul metodelor boolean/int/String interpret pe obiectele de tipul: AVal, BVal, Var, 
+PlusExpr, DivExpr, ParExpr, AndExpr, NotExpr si GtExpr, se intoarce numele variabilei, valoarea
+atribuita acesteia sau valoarea booleana a unei conditii de inaintare
+- clasele: Plus, Div, OpenR, CloseR, And, Greater, Not, Assignment, OpenA, CloseA, If, While, 
+Else, AVal, BVal, Var sunt folosite la parsare in Tema.jflex, pentru retinerea in stiva a
+simbolurilor utilizate in cod
+- clasele: AVal, BVal, Var, PlusExpr, DivExpr, ParExpr, AssignExpr, AndExpr, NotExpr, GtExpr, 
+BlockExpr, IfExpr, WhileExpr, SeqExpr sunt folosite in arborele sintactic ast de tip Expression
+din Tema.jflex, fie ca frunze (AVal, BVal, Var) fie ca noduri (celelalte)
+- clasa Var va arunca o exceptie de tip TemaException (definita in clasa TemaException) cu 
+textul UnassignedVar la apelul metodei interpret, in cazul in care la construirea arborelui de
+parsare se intalneste o variabila nedefinita in prima linie a codului, sau daca se foloseste o
+variabila neinitializata
+- clasa DivExpr arunca o exceptie de tipul TemaException cu textul DivideByZero, la apelul
+metodei interpret, daca pentru termenul din dreapta dupa interpretare, se obtine valoarea 0
+
+2)Tema.jflex
+- in cea de-a patra sectiune au fost definite structurile si functiile folosite in fisier:
+	*)variables - lista de perechi (nume variabila, valoare variabila)
+	*)nrVar - numarul de variabile
+	*)stackAExpr - stiva de obiecte tip Expression, folosita pentru parsarea codului primit ca 
+	input
+	*)ast - arborele sintactic
+	*)putVariables - variabila booleana care indica daca ma aflu pe linia in care sunt definite
+	variabilele sau nu
+	*)get_nth_element_from_stack(int element_number) - metoda care intoarce obiectul de tipul
+	Expression, aflat pe pozitia element_number in stiva
+	*)generateBlock() -generea o expresie BlockExpr din expresia aflata pe stiva pana la prima
+	acolada deschisa (OpenA). Daca sunt mai multe expresii pana la OpenA, primele 2 scoase din
+	stiva se unesc intr-o expresie SeqExpr, se pun pe stiva si se reia procesul.
+	*)generateRoot() - apelata la intalnirea finalului fisierului ( %eof{generateRoot(); %eof} ).
+	Atribuie arborelui de tip Expression ast, ultima expresie de pe stiva. In cazul in care sunt
+	mai multe expresii pe stiva, primele 2 expresii de la varful stivei se unesc intr-o expresie
+	SeqExpr, care se pune pe stiva iar procesul se reia.
+- in a 5-a sectiune sunt definiti tokenii folositi pentru a identifica simbolurile din codul
+primit ca input
+- in a 6-a sectiune se executa actiuni la intalnirea unora dintre acesti tokeni:
+	*)If, Else, While, OpenR, notOp, equalOp, OpenA pun pe stiva expresii din clasa
+	Expresiion.java, folosite doar pentru a retine pozitia tokenilor in cadrul stivei, nu si la
+	construirea arborelui de parsare
+	*)la intalnirea simbolului Int, variabila putVariables devine true iar la intalnirea oricarui
+	token de tipul Var, acesta este adaugat in HashMap-ul variables cu valoarea null, pana la 
+	intalnirea primului simbol semicolonOp, cand putVariables redevine false.
+	*)BVal, AVal si Var sunt folositi si pentru a retine pozitia tokenilor in cadrul stivei, dar
+	si ca frunze in cadrul arborelui sintactic ast
+	*)la intalnirea unui simbol addOp, se verifica al doilea element de pe stiva iar daca este
+	o expresie Plus, primul si al treilea element de pe stiva se unesc intr-o expresie PlusExpr.
+	Daca al doilea element este un Div, primul si al treilea element se unesc intr-o expresie 
+	DivExpr. Procesul se repete pana cand al doilea element nu va mai fi un Plus sau un Div. La
+	final se adauga in stiva simbolul Plus intalnit.
+	*)divOp - se verifica daca al doilea element este un Div, caz in care primul si al treilea
+	element se unesc intr-o expresie DivExpr. Procesul se repetaa pana cand al doilea element nu
+	va mai fi de tipul Div. La final se adauga pe stiva simbolul Div intalnit.
+	*)closeR - cat timp al doilea element de pe stiva este Plus, Div, Greater, And sau Not, 
+	prima si a treia expresie de pe stiva (sau doar prima in cazul lui Not) se unesc intr-o
+ 	expresie de tipul PlusExpr, DivExpr, GtExpr, AndExpr sau NotExpr. La final, a doua expresie 
+	de pe stiva trebuie sa fie o paranteza deschisa OpenR, deci se scot primele 2 expresii de pe
+	stiva si se pune o expresie de tipul ParExpr, avand drept copil prima expresie eliminata din
+	stiva.
+	*)andOp - cat timp a doua expresie de pe stiva este de tipul And, Not, Greater, se unesc 
+	prima si a treia expresie de pe stiva (sau doar prima in cazul lui Not) intr-o expresie de
+	tipul AndExpr, NotExpr sau GtExpr. La fina se pune pe stiva sibolul And intalnit.
+	*)greaterOp - cat timp a doua expresie de pe stiva este de tipul Plus sau Div, se unesc prima
+	si a treia expresie inttr-o expresie de tipul PlusExpr sau DivExpr. La final se pune pe stiva
+	simbolul intalnit Greater.
+	*)closeA - se unesc toate epresiile de pe stiva pana la acolada deschisa OpenA, intr-o 
+	expresie de tipul BlockExpr, folosind metoda generateBlock(). Daca a doua expresie de pe 
+	stiva este de tipul Else, inseamna ca pe stiva se afla un bloc if-else: primul element de pe
+	stiva este blocul others, al doilea este Else, al treilea este then, apoi conditia si apoi
+	If. Se unesc aceste expresii si se pune pe stiva o expresie de tipul IfExpr. Daca al treilea
+	element de pe stiva este de tipul While, inseamna ca pe stiva se afla un bloc while: prima
+	expresie de pe stiva este blocul then, apoi conditia si apoi While. Se unesc aceste expresii
+	intr-o expresie de tipul WhileExpr, care se pune pe stiva.
+	*)semicolonOp - cat timp a doua expresie este de tipul Plus sau Div, se unesc prima si a 
+	treia expresie in expresii de tipul PlusExpr sau DivExpr. La final se verifica daca al doilea
+	element este de tipul Assignment, caz in care se unesc prima si a treia expresie intr-o 
+	expresie de tipul AssignExpr.
+
+3)Tema.java
+-se instantiaza clasa TemaLexer, generata de Tema.jflex, avand ca argument primul parametru din
+linia de comanda: numele fisierului de intrare.
+-se apeleaza metoda yylex() asupra instanetei l a clasei TemaLexer, care parseaza fisierul de
+intrare si genereaza ast-ul.
+-prin apelul ast.explore(0, bw), se porneste explorarea arborelui sintactic de la nivelul de
+identare 0, nodurile parcurse fiind scrise in bw, corespunzator fisierului "arbore".
+-prin apelul metodei ((BlockExpr)ast).interpret(variables, null), se obtin valorile 
+variabilelor din LinkedHashMap-ul variables, iar in cazul intalnirii unei exceptii de tipul
+TemaException, aceasta este scrisa in fisierul corespunzator bw: "output". In cazul in care nu
+a fost intalnita nicio exceptie de tipul TemaException, numele variabilelor si valoarile lor
+sunt scrise in fisierul "output".
